@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.get('theme', 'dark') }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Study Planner Pro</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+{% if page in ['login','signup','forgot'] %}
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     AUTH PAGES
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="auth-wrapper">
+  <div class="auth-bg">
+    <div class="auth-orb auth-orb1"></div>
+    <div class="auth-orb auth-orb2"></div>
+    <div class="auth-orb auth-orb3"></div>
+    <div class="auth-grid"></div>
+  </div>
+
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="brand-icon"><i class="fas fa-brain"></i></div>
+      <span class="brand-name">StudyPlanner<span class="brand-pro">Pro</span></span>
+    </div>
+
+    {% if page == 'login' %}
+    <div class="auth-header">
+      <h1>Welcome back</h1>
+      <p>Sign in to continue your study journey</p>
+    </div>
+    <form class="auth-form" id="loginForm">
+      <div class="form-group">
+        <label>Email Address</label>
+        <div class="input-wrap">
+          <i class="fas fa-envelope"></i>
+          <input type="email" name="email" placeholder="you@example.com" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock"></i>
+          <input type="password" name="password" placeholder="••••••••" required id="loginPwd">
+          <button type="button" class="toggle-pwd" onclick="togglePwd('loginPwd', this)">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="checkbox-label"><input type="checkbox"> Remember me</label>
+        <a href="/forgot-password" class="link-sm">Forgot password?</a>
+      </div>
+      <div id="authMsg" class="auth-msg"></div>
+      <button type="submit" class="btn-auth">Sign In <i class="fas fa-arrow-right"></i></button>
+    </form>
+    <p class="auth-switch">Don't have an account? <a href="/signup">Create one</a></p>
+
+    {% elif page == 'signup' %}
+    <div class="auth-header">
+      <h1>Create account</h1>
+      <p>Start your smart study journey today</p>
+    </div>
+    <form class="auth-form" id="signupForm">
+      <div class="form-group">
+        <label>Full Name</label>
+        <div class="input-wrap">
+          <i class="fas fa-user"></i>
+          <input type="text" name="name" placeholder="Your full name" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <div class="input-wrap">
+          <i class="fas fa-envelope"></i>
+          <input type="email" name="email" placeholder="you@example.com" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock"></i>
+          <input type="password" name="password" placeholder="Min 6 characters" required id="signupPwd">
+          <button type="button" class="toggle-pwd" onclick="togglePwd('signupPwd', this)">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+      </div>
+      <div id="authMsgSignup" class="auth-msg"></div>
+      <button type="submit" class="btn-auth">Create Account <i class="fas fa-arrow-right"></i></button>
+    </form>
+    <p class="auth-switch">Already have an account? <a href="/login">Sign in</a></p>
+
+    {% elif page == 'forgot' %}
+    <div class="auth-header">
+      <h1>Reset password</h1>
+      <p>We'll send a reset link to your email</p>
+    </div>
+    <form class="auth-form" id="forgotForm">
+      <div class="form-group">
+        <label>Email Address</label>
+        <div class="input-wrap">
+          <i class="fas fa-envelope"></i>
+          <input type="email" name="email" placeholder="you@example.com" required>
+        </div>
+      </div>
+      <div id="authMsgForgot" class="auth-msg"></div>
+      <button type="submit" class="btn-auth">Send Reset Link <i class="fas fa-paper-plane"></i></button>
+    </form>
+    <p class="auth-switch"><a href="/login"><i class="fas fa-arrow-left"></i> Back to Sign In</a></p>
+    {% endif %}
+
+  </div><!-- /auth-card -->
+</div><!-- /auth-wrapper -->
+
+{% else %}
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     APP LAYOUT
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="app-layout" id="appLayout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fas fa-brain"></i></div>
+      <span class="brand-text">Study<span>Pro</span></span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-item {% if page == 'dashboard' %}active{% endif %}">
+        <i class="fas fa-home"></i><span>Dashboard</span>
+      </a>
+      <a href="/planner" class="nav-item {% if page == 'planner' %}active{% endif %}">
+        <i class="fas fa-calendar-alt"></i><span>Planner</span>
+      </a>
+      <a href="/tasks" class="nav-item {% if page == 'tasks' %}active{% endif %}">
+        <i class="fas fa-tasks"></i><span>Tasks</span>
+      </a>
+      <a href="/pomodoro" class="nav-item {% if page == 'pomodoro' %}active{% endif %}">
+        <i class="fas fa-clock"></i><span>Pomodoro</span>
+      </a>
+      <a href="/analytics" class="nav-item {% if page == 'analytics' %}active{% endif %}">
+        <i class="fas fa-chart-line"></i><span>Analytics</span>
+      </a>
+      <a href="/profile" class="nav-item {% if page == 'profile' %}active{% endif %}">
+        <i class="fas fa-user-circle"></i><span>Profile</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+        <i class="fas fa-moon" id="themeIcon"></i>
+      </button>
+      <a href="/logout" class="nav-item logout">
+        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+      </a>
+    </div>
+  </aside><!-- /sidebar -->
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <header class="topbar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="topbar-title">
+        {% if page == 'dashboard' %}Dashboard
+        {% elif page == 'planner' %}Study Planner
+        {% elif page == 'tasks' %}Task Manager
+        {% elif page == 'pomodoro' %}Pomodoro Timer
+        {% elif page == 'analytics' %}Analytics
+        {% elif page == 'profile' %}Profile Settings
+        {% endif %}
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-date">{{ datetime.now().strftime('%B %d, %Y') if datetime else '' }}</span>
+        <div class="topbar-avatar" onclick="window.location='/profile'">
+          {% if session.get('user_avatar') %}
+            <img src="{{ session['user_avatar'] }}" alt="avatar">
+          {% else %}
+            <span>{{ (session.get('user_name') or 'U')[0].upper() }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <div class="page-content" id="pageContent">
+
+<!-- ─── DASHBOARD ─────────────────────────────────────────────────────────── -->
+{% if page == 'dashboard' %}
+<div class="page-fade-in">
+
+  <div class="welcome-banner">
+    <div class="welcome-text">
+      <h2>Good
+        {% if datetime.now().hour < 12 %}morning
+        {% elif datetime.now().hour < 17 %}afternoon
+        {% else %}evening
+        {% endif %},
+        {{ session.get('user_name', 'Student').split()[0] }}! 👋
+      </h2>
+      <p>Ready to crush your study goals today?</p>
+    </div>
+    <div class="quote-card">
+      <i class="fas fa-quote-left"></i>
+      <p id="quoteText">"{{ quote.quote }}"</p>
+      <span>— {{ quote.author }}</span>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card stat-blue">
+      <div class="stat-icon"><i class="fas fa-clock"></i></div>
+      <div class="stat-info">
+        <span class="stat-num">{{ today_hours }}h</span>
+        <span class="stat-label">Today</span>
+      </div>
+    </div>
+    <div class="stat-card stat-purple">
+      <div class="stat-icon"><i class="fas fa-fire"></i></div>
+      <div class="stat-info">
+        <span class="stat-num">{{ week_hours }}h</span>
+        <span class="stat-label">This Week</span>
+      </div>
+    </div>
+    <div class="stat-card stat-green">
+      <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+      <div class="stat-info">
+        <span class="stat-num">{{ completed_tasks }}/{{ total_tasks }}</span>
+        <span class="stat-label">Tasks Done</span>
+      </div>
+    </div>
+    <div class="stat-card stat-orange">
+      <div class="stat-icon"><i class="fas fa-percent"></i></div>
+      <div class="stat-info">
+        <span class="stat-num">{{ completion_rate }}%</span>
+        <span class="stat-label">Completion</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+
+    <!-- Today's Tasks -->
+    <div class="dash-card">
+      <div class="card-header">
+        <h3><i class="fas fa-calendar-day"></i> Today's Tasks</h3>
+        <a href="/tasks" class="link-sm">View all</a>
+      </div>
+      {% if tasks_today %}
+      <ul class="task-mini-list">
+        {% for t in tasks_today %}
+        <li class="task-mini {% if t.status == 'completed' %}done{% endif %}">
+          <span class="priority-dot p-{{ t.priority }}"></span>
+          <span class="task-mini-title">{{ t.title }}</span>
+          <span class="task-mini-status">{{ t.status }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty-state">
+        <i class="fas fa-sun"></i>
+        <p>No tasks due today!</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Upcoming Deadlines -->
+    <div class="dash-card">
+      <div class="card-header">
+        <h3><i class="fas fa-hourglass-half"></i> Upcoming Deadlines</h3>
+      </div>
+      {% if upcoming %}
+      <ul class="task-mini-list">
+        {% for t in upcoming %}
+        <li class="task-mini">
+          <span class="priority-dot p-{{ t.priority }}"></span>
+          <div>
+            <span class="task-mini-title">{{ t.title }}</span>
+            <span class="task-mini-sub">{{ t.subject_name or 'No subject' }} · {{ t.deadline }}</span>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <p>No upcoming deadlines</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Subjects -->
+    <div class="dash-card">
+      <div class="card-header">
+        <h3><i class="fas fa-book"></i> Subjects</h3>
+        <a href="/planner" class="link-sm">Manage</a>
+      </div>
+      {% if subjects %}
+      <div class="subject-mini-list">
+        {% for s in subjects %}
+        <div class="subject-mini" style="--sc: {{ s.color }};">
+          <div class="subject-mini-color"></div>
+          <div class="subject-mini-info">
+            <span>{{ s.name }}</span>
+            <div class="mini-progress-bar">
+              <div class="mini-progress-fill"style="width: {{ [((s.completed_hours / s.target_hours) * 100), 100] | min if s.target_hours else 0 }}%;">
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <i class="fas fa-plus-circle"></i>
+        <p><a href="/planner">Add your first subject</a></p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- AI Suggestions -->
+    <div class="dash-card ai-card">
+      <div class="card-header">
+        <h3><i class="fas fa-robot"></i> AI Suggestions</h3>
+        <button class="btn-sm" onclick="loadAISuggestions()"><i class="fas fa-sync-alt"></i></button>
+      </div>
+      <div id="aiSuggestions" class="ai-suggestions">
+        <div class="ai-loading"><i class="fas fa-spinner fa-spin"></i> Analyzing your progress...</div>
+      </div>
+    </div>
+
+  </div><!-- /dashboard-grid -->
+</div><!-- /page-fade-in -->
+
+<!-- ─── PLANNER ────────────────────────────────────────────────────────────── -->
+{% elif page == 'planner' %}
+<div class="page-fade-in">
+  <div class="page-actions">
+    <button class="btn-primary" onclick="openModal('addSubjectModal')">
+      <i class="fas fa-plus"></i> Add Subject
+    </button>
+    <button class="btn-secondary" onclick="openModal('addTimetableModal')">
+      <i class="fas fa-calendar-plus"></i> Add Slot
+    </button>
+    <button class="btn-accent" onclick="generateTimetable()">
+      <i class="fas fa-magic"></i> AI Generate
+    </button>
+  </div>
+
+  <div class="planner-grid">
+
+    <!-- Subjects Panel -->
+    <div class="subjects-panel">
+      <h3 class="panel-title"><i class="fas fa-book-open"></i> Subjects</h3>
+      <div id="subjectsList">
+        {% for s in subjects %}
+        <div class="subject-card" style="--sc: {{ s.color }};" data-id="{{ s.id }}">
+          <div class="subject-color-bar"></div>
+          <div class="subject-card-body">
+            <h4>{{ s.name }}</h4>
+            <div class="subject-meta">
+              <span><i class="fas fa-bullseye"></i> {{ s.target_hours }}h target</span>
+              <span><i class="fas fa-check"></i> {{ s.completed_hours }}h done</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill"style="width: {{ [(s.completed_hours * 100 / s.target_hours), 100] | min if s.target_hours else 0 }}%;
+                      background: {{ s.color }};">
+              </div>
+            </div>
+          </div>
+          <button class="delete-btn" onclick="deleteSubject('{{ s.id }}')">
+    <i class="fas fa-trash"></i>
+</button>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <i class="fas fa-book"></i>
+          <p>No subjects yet. Add one!</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div><!-- /subjects-panel -->
+
+    <!-- Timetable Panel -->
+    <div class="timetable-panel">
+      <h3 class="panel-title"><i class="fas fa-calendar-week"></i> Weekly Timetable</h3>
+      <div class="timetable-grid" id="timetableGrid">
+        {% set days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+        {% for day in days %}
+        <div class="tt-day">
+          <div class="tt-day-header">{{ day }}</div>
+          <div class="tt-slots" id="ttDay{{ day }}">
+            {% for slot in timetable if slot.day == day %}
+            <div class="tt-slot" style="--sc: {{ slot.color }};" data-id="{{ slot.id }}">
+              <span class="tt-subject">{{ slot.subject_name }}</span>
+              <span class="tt-time">{{ slot.start_time }}–{{ slot.end_time }}</span>
+              <button class="tt-delete" onclick="deleteTTSlot('{{ slot.id }}', this)">
+    <i class="fas fa-times"></i>
+</button>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div><!-- /timetable-panel -->
+
+  </div><!-- /planner-grid -->
+</div><!-- /page-fade-in -->
+
+<!-- ─── TASKS ──────────────────────────────────────────────────────────────── -->
+{% elif page == 'tasks' %}
+<div class="page-fade-in">
+  <div class="tasks-toolbar">
+    <div class="search-wrap">
+      <i class="fas fa-search"></i>
+      <input type="text" id="taskSearch" placeholder="Search tasks..." oninput="filterTasks()">
+    </div>
+    <select id="filterPriority" onchange="filterTasks()" class="filter-select">
+      <option value="">All Priorities</option>
+      <option value="high">High</option>
+      <option value="medium">Medium</option>
+      <option value="low">Low</option>
+    </select>
+    <select id="filterStatus" onchange="filterTasks()" class="filter-select">
+      <option value="">All Status</option>
+      <option value="pending">Pending</option>
+      <option value="in-progress">In Progress</option>
+      <option value="completed">Completed</option>
+    </select>
+    <button class="btn-primary" onclick="openModal('addTaskModal')">
+      <i class="fas fa-plus"></i> Add Task
+    </button>
+  </div>
+
+  <div class="tasks-kanban" id="tasksContainer">
+    {% for status, label, icon in [('pending','To Do','fa-circle'),('in-progress','In Progress','fa-spinner'),('completed','Done','fa-check-circle')] %}
+    <div class="kanban-col">
+      <div class="kanban-header">
+        <i class="fas {{ icon }}"></i> {{ label }}
+        <span class="kanban-count" id="count-{{ status }}">
+          {{ tasks | selectattr('status', 'equalto', status) | list | length }}
+        </span>
+      </div>
+      <div class="kanban-cards" id="col-{{ status }}">
+        {% for t in tasks if t.status == status %}
+        <div class="task-card priority-{{ t.priority }}"
+             data-id="{{ t.id }}"
+             data-title="{{ t.title | e }}"
+             data-priority="{{ t.priority }}"
+             data-status="{{ t.status }}"
+             data-deadline="{{ t.deadline or '' }}"
+             data-desc="{{ t.description | default('', true) | e }}"
+             data-subject="{{ t.subject_id or '' }}">
+          <div class="task-card-top">
+            <span class="priority-badge p-{{ t.priority }}">{{ t.priority }}</span>
+            <div class="task-actions">
+              <button onclick="editTask(this.closest('.task-card'))">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button onclick="deleteTask('{{ t.id }}', this)">
+    <i class="fas fa-trash"></i>
+</button>
+            </div>
+          </div>
+          <h4 class="task-title">{{ t.title }}</h4>
+          {% if t.description %}
+          <p class="task-desc">{{ t.description }}</p>
+          {% endif %}
+          <div class="task-meta">
+            {% if t.subject_name %}
+            <span class="task-subject"
+      style="color: '{{ t.color }}';">
+      
+    <i class="fas fa-book"></i>
+    {{ t.subject_name }}
+
+</span>
+            {% endif %}
+            {% if t.deadline %}
+            <span class="task-deadline">
+              <i class="fas fa-calendar"></i> {{ t.deadline }}
+            </span>
+            {% endif %}
+          </div>
+          <div class="task-status-btns">
+            {% if status != 'pending' %} 
+<div class="task-status-btns">
+
+    {% if status != 'pending' %}
+    <button class="status-btn"
+            onclick="moveTask('{{ t.id }}', 'pending', this)">
+        To Do
+    </button>
+    {% endif %}
+
+    {% if status != 'in-progress' %}
+    <button class="status-btn"
+            onclick="moveTask('{{ t.id }}', 'in-progress', this)">
+        In Progress
+    </button>
+    {% endif %}
+
+    {% if status != 'completed' %}
+    <button class="status-btn status-done"
+            onclick="moveTask('{{ t.id }}', 'completed', this)">
+        &#10003; Done
+    </button>
+    {% endif %}
+
+</div>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div><!-- /page-fade-in -->
+
+<!-- ─── POMODORO ───────────────────────────────────────────────────────────── -->
+{% elif page == 'pomodoro' %}
+<div class="page-fade-in pomodoro-page">
+  <div class="pomodoro-layout">
+
+    <div class="pomodoro-main">
+      <div class="mode-tabs">
+        <button class="mode-tab active" onclick="setMode('study', this)">Study</button>
+        <button class="mode-tab" onclick="setMode('short', this)">Short Break</button>
+        <button class="mode-tab" onclick="setMode('long', this)">Long Break</button>
+      </div>
+
+      <div class="pomodoro-ring-wrap">
+        <svg class="pomo-ring" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="pomoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="100%" stop-color="#22d3a8"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-bg" cx="100" cy="100" r="88"/>
+          <circle class="ring-fg" cx="100" cy="100" r="88" id="timerRing"
+                  stroke="url(#pomoGradient)"
+                  fill="none"
+                  stroke-width="8"
+                  stroke-linecap="round"
+                  stroke-dasharray="553"
+                  stroke-dashoffset="0"
+                  transform="rotate(-90 100 100)"/>
+        </svg>
+        <div class="pomo-center">
+          <div class="pomo-time" id="timerDisplay">25:00</div>
+          <div class="pomo-label" id="timerLabel">FOCUS TIME</div>
+        </div>
+      </div>
+
+      <div class="pomo-controls">
+        <button class="pomo-btn pomo-reset" onclick="resetTimer()">
+          <i class="fas fa-redo"></i>
+        </button>
+        <button class="pomo-btn pomo-play" id="playBtn" onclick="toggleTimer()">
+          <i class="fas fa-play" id="playIcon"></i>
+        </button>
+        <button class="pomo-btn pomo-skip" onclick="skipSession()">
+          <i class="fas fa-forward"></i>
+        </button>
+      </div>
+
+      <div class="pomo-subject-select">
+        <label>Studying:</label>
+        <select id="pomoSubject" class="filter-select">
+          <option value="">— Select Subject —</option>
+          {% for s in subjects %}
+          <option value="{{ s.id }}">{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div><!-- /pomodoro-main -->
+
+    <div class="pomodoro-sidebar">
+      <div class="pomo-stat-card">
+        <i class="fas fa-fire"></i>
+        <div>
+          <span class="pomo-stat-num" id="sessionsToday">{{ today_sessions }}</span>
+          <span class="pomo-stat-label">Sessions Today</span>
+        </div>
+      </div>
+      <div class="pomo-stat-card">
+        <i class="fas fa-check-circle"></i>
+        <div>
+          <span class="pomo-stat-num" id="pomoCycles">0</span>
+          <span class="pomo-stat-label">This Run</span>
+        </div>
+      </div>
+
+      <div class="pomo-tips">
+        <h4><i class="fas fa-lightbulb"></i> Pomodoro Tips</h4>
+        <ul>
+          <li>Work for 25 min, then break for 5</li>
+          <li>After 4 sessions, take a 15-min break</li>
+          <li>Eliminate distractions during focus</li>
+          <li>Review your notes on each break</li>
+        </ul>
+      </div>
+
+      <div class="pomo-log">
+        <h4><i class="fas fa-history"></i> Session Log</h4>
+        <div id="pomoLog" class="pomo-log-list"></div>
+      </div>
+    </div><!-- /pomodoro-sidebar -->
+
+  </div><!-- /pomodoro-layout -->
+</div><!-- /page-fade-in -->
+
+<!-- ─── ANALYTICS ─────────────────────────────────────────────────────────── -->
+{% elif page == 'analytics' %}
+<div class="page-fade-in">
+  <div class="analytics-stats">
+    <div class="an-stat">
+      <i class="fas fa-clock"></i>
+      <div>
+        <span class="an-num">{{ total_hours }}h</span>
+        <span class="an-label">Total Studied</span>
+      </div>
+    </div>
+    <div class="an-stat">
+      <i class="fas fa-tasks"></i>
+      <div>
+        <span class="an-num">{{ done_tasks }}/{{ total_tasks }}</span>
+        <span class="an-label">Tasks Done</span>
+      </div>
+    </div>
+    <div class="an-stat">
+      <i class="fas fa-fire-alt"></i>
+      <div>
+        <span class="an-num" id="streakNum">{{ streak }}</span>
+        <span class="an-label">Day Streak 🔥</span>
+      </div>
+    </div>
+    <div class="an-stat">
+      <i class="fas fa-star"></i>
+      <div>
+        <span class="an-num">
+          {% if total_tasks %}
+            {{ [(done_tasks / total_tasks * 100), 100] | min | round(0) | int }}%
+          {% else %}
+            0%
+          {% endif %}
+        </span>
+        <span class="an-label">Completion</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card wide">
+      <div class="chart-header">
+        <h3><i class="fas fa-chart-bar"></i> Weekly Study Hours</h3>
+      </div>
+      <canvas id="weeklyChart" height="90"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3><i class="fas fa-chart-pie"></i> Subject Distribution</h3>
+      </div>
+      <canvas id="subjectChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3><i class="fas fa-chart-line"></i> Productivity Trend</h3>
+      </div>
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+</div><!-- /page-fade-in -->
+
+<!-- ─── PROFILE ────────────────────────────────────────────────────────────── -->
+{% elif page == 'profile' %}
+<div class="page-fade-in">
+  <div class="profile-layout">
+
+    <div class="profile-card">
+      <div class="profile-avatar-wrap">
+        {% if user.avatar %}
+        <img src="{{ user.avatar }}" alt="avatar" class="profile-avatar" id="avatarPreview">
+        {% else %}
+        <div class="profile-avatar-placeholder" id="avatarPreview">
+    {{ (user.name or 'U')[0].upper() }}
+</div>
+        {% endif %}
+        <label class="avatar-upload-btn" for="avatarInput">
+          <i class="fas fa-camera"></i>
+        </label>
+        <input type="file" id="avatarInput" accept="image/*"
+               onchange="previewAvatar(this)" style="display: none;">
+      </div>
+      <h3 class="profile-name">{{ user.name }}</h3>
+      <p class="profile-email">{{ user.email }}</p>
+    </div>
+
+    <div class="settings-cards">
+      <form class="settings-card" id="profileForm" enctype="multipart/form-data">
+        <h3><i class="fas fa-user-edit"></i> Personal Info</h3>
+        <div class="form-group">
+          <label>Full Name</label>
+          <div class="input-wrap">
+            <i class="fas fa-user"></i>
+            <input type="text" name="name" value="{{ user.name }}" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <div class="input-wrap">
+            <i class="fas fa-envelope"></i>
+            <input type="email" value="{{ user.email }}" disabled>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Theme</label>
+          <select name="theme" class="filter-select" id="themeSelect">
+            <option value="dark" {% if user.theme == 'dark' %}selected{% endif %}>Dark</option>
+            <option value="light" {% if user.theme == 'light' %}selected{% endif %}>Light</option>
+          </select>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" name="notifications"
+                 {% if user.notifications %}checked{% endif %}>
+          Enable notifications
+        </label>
+        <div id="profileMsg" class="auth-msg" style="margin: 1rem 0;"></div>
+        <button type="submit" class="btn-primary">Save Changes</button>
+      </form>
+
+      <div class="settings-card">
+        <h3><i class="fas fa-lock"></i> Change Password</h3>
+        <div class="form-group">
+          <label>Current Password</label>
+          <div class="input-wrap">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="currentPwd" placeholder="Current password">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>New Password</label>
+          <div class="input-wrap">
+            <i class="fas fa-key"></i>
+            <input type="password" id="newPwd" placeholder="New password">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <div class="input-wrap">
+            <i class="fas fa-key"></i>
+            <input type="password" id="confirmPwd" placeholder="Confirm new password">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="changePassword()">Update Password</button>
+      </div>
+    </div><!-- /settings-cards -->
+
+  </div><!-- /profile-layout -->
+</div><!-- /page-fade-in -->
+{% endif %}
+
+    </div><!-- /page-content -->
+  </main><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MODALS  (outside app-layout so they overlay correctly)
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeAllModals()"></div>
+
+<!-- Add Subject Modal -->
+<div class="modal" id="addSubjectModal">
+  <div class="modal-header">
+    <h3><i class="fas fa-book"></i> Add Subject</h3>
+    <button onclick="closeAllModals()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="modal-body">
+    <div class="form-group">
+      <label>Subject Name</label>
+      <input type="text" id="subName" placeholder="e.g. Mathematics" class="modal-input">
+    </div>
+    <div class="form-group">
+      <label>Color</label>
+      <input type="color" id="subColor" value="#6366f1" class="color-input">
+    </div>
+    <div class="form-group">
+      <label>Target Hours</label>
+      <input type="number" id="subHours" placeholder="40" class="modal-input" min="0" step="0.5">
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-secondary" onclick="closeAllModals()">Cancel</button>
+    <button class="btn-primary" onclick="addSubject()">Add Subject</button>
+  </div>
+</div>
+
+<!-- Add Timetable Slot Modal -->
+<div class="modal" id="addTimetableModal">
+  <div class="modal-header">
+    <h3><i class="fas fa-calendar-plus"></i> Add Time Slot</h3>
+    <button onclick="closeAllModals()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="modal-body">
+    <div class="form-group">
+      <label>Subject</label>
+      <select id="ttSubject" class="modal-input">
+        {% if subjects %}
+          {% for s in subjects %}
+          <option value="{{ s.id }}">{{ s.name }}</option>
+          {% endfor %}
+        {% else %}
+          <option value="">— No subjects yet —</option>
+        {% endif %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Day</label>
+      <select id="ttDay" class="modal-input">
+        {% for d in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+        <option value="{{ d }}">{{ d }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Start Time</label>
+        <input type="time" id="ttStart" class="modal-input" value="09:00">
+      </div>
+      <div class="form-group">
+        <label>End Time</label>
+        <input type="time" id="ttEnd" class="modal-input" value="10:00">
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-secondary" onclick="closeAllModals()">Cancel</button>
+    <button class="btn-primary" onclick="addTimetableSlot()">Add Slot</button>
+  </div>
+</div>
+
+<!-- Add / Edit Task Modal -->
+<div class="modal" id="addTaskModal">
+  <div class="modal-header">
+    <h3 id="taskModalTitle"><i class="fas fa-plus"></i> Add Task</h3>
+    <button onclick="closeAllModals()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="editTaskId">
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="taskTitle" placeholder="Task title" class="modal-input">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="taskDesc" placeholder="Optional description" class="modal-input" rows="3"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Priority</label>
+        <select id="taskPriority" class="modal-input">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Deadline</label>
+        <input type="date" id="taskDeadline" class="modal-input">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Subject (optional)</label>
+      <select id="taskSubject" class="modal-input">
+        <option value="">— None —</option>
+        {% if subjects %}
+          {% for s in subjects %}
+          <option value="{{ s.id }}">{{ s.name }}</option>
+          {% endfor %}
+        {% endif %}
+      </select>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-secondary" onclick="closeAllModals()">Cancel</button>
+    <button class="btn-primary" onclick="saveTask()">Save Task</button>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast"></div>
+
+{% endif %}<!-- /auth vs app split -->
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+
+{% if page == 'analytics' %}
+
+<script type="application/json" id="analytics-data">
+{
+    "weekly": {{ weekly | tojson }},
+    "labels": {{ weekly_labels | tojson }},
+    "names": {{ subjects | map(attribute='name') | list | tojson }},
+    "hours": {{ subjects | map(attribute='hours') | list | tojson }},
+    "colors": {{ subjects | map(attribute='color') | list | tojson }}
+}
+</script>
+
+<script>
+
+    const analyticsData = JSON.parse(
+        document.getElementById("analytics-data").textContent
+    );
+
+    initAnalytics(
+        analyticsData.weekly,
+        analyticsData.labels,
+        analyticsData.names,
+        analyticsData.hours,
+        analyticsData.colors
+    );
+
+</script>
+
+{% endif %}
+{% if page == 'dashboard' %}
+<script>loadAISuggestions();</script>
+{% endif %}
+
+</body>
+</html>
